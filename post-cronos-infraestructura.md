@@ -1,7 +1,7 @@
 # Post-Cronos: Córdoba 2060 — Documento técnico de infraestructura
 
 > Documento pensado para ser leído por una persona o por un agente de IA.
-> Fuente: repositorio `github.com/Learmonelli/post-cronos` (rama `master`, 5 commits) + `AGENTS.md`.
+> Fuente: repositorio `github.com/post-cronos/post-cronos` (rama `master`) + `AGENTS.md`.
 > Última actualización: 2026-10-29. Los datos marcados como "A confirmar" no están en el repo.
 
 ---
@@ -46,10 +46,10 @@ No hay servidor, base de datos propia ni API. La web es 100% estática y consume
 ## 3. Componentes y configuración
 
 ### 3.1 Hosting — GitHub Pages
-- Repo: `Learmonelli/post-cronos`, rama `master`.
+- Repo: `post-cronos/post-cronos`, rama `master`.
 - Publica `index.html`, `logo.png`, `data.js`, `resumen_ia.js`.
 - No hay build step ni CI: el deploy es el push a `master`.
-- Dominio actual: **A confirmar** (probablemente `*.github.io`).
+- Dominio actual: `https://post-cronos.github.io/post-cronos/`.
 
 ### 3.2 Storage — Google Cloud Storage
 - Bucket: `post-cronos-dibujos-2060`, región `us-central1`.
@@ -139,7 +139,7 @@ Dominio del proyecto
 
 **Fase 1 — Código (sin downtime)**
 - [ ] Crear GitHub Organization (plan Free) a nombre del proyecto.
-- [ ] Transferir `Learmonelli/post-cronos` a la organización (conserva historial y redirige links).
+- [x] Migrar el repo a la cuenta del proyecto: `post-cronos/post-cronos` (historial conservado).
 - [ ] Dar roles: owners del proyecto, `maintain`/`write` a desarrollo.
 - [ ] Quitar credenciales hardcodeadas y usar `GOOGLE_APPLICATION_CREDENTIALS` por variable de entorno.
 - [ ] Agregar `process_with_gemini.py` al repo.
@@ -200,7 +200,7 @@ Dominio del proyecto
 
 ## 8. Cómo usar este documento (para el agente de IA)
 
-- Este archivo describe el estado real del repo `Learmonelli/post-cronos` al 2026-10-29.
+- Este archivo describe el estado real del repo `post-cronos/post-cronos` al 2026-11-02.
 - "A confirmar" significa que el dato no está en el repositorio y debe preguntarse a las personas.
 - No asumir que existen tests, CI, backend ni base de datos propia: no existen.
 - Antes de proponer cambios, verificar los nombres exactos de bucket (`post-cronos-dibujos-2060`), proyecto (`laboratorio-cordoba-2060`), tabla (`post_cronos.encuestas`) y modelo (`gemini-2.5-flash-lite`).

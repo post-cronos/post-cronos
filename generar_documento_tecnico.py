@@ -275,7 +275,7 @@ table(doc,
 # ---------- Web ----------
 doc.section(8, 'Pagina Web y Dashboard')
 doc.body(
-    'La pagina (index.html) se publica en https://learmonelli.github.io/post-cronos/ y se actualiza '
+    'La pagina (index.html) se publica en https://post-cronos.github.io/post-cronos/ y se actualiza '
     'regenerando los archivos data.js y resumen_ia.js y subiendo los cambios al repositorio. Tiene dos vistas:'
 )
 doc.sub('Vista 1 - Dashboard')
