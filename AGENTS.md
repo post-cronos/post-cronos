@@ -16,6 +16,15 @@ Proyecto participativo donde niños y adolescentes imaginan y dibujan Córdoba e
 - El campo `eje` admite **múltiples valores** separados por coma (ej: `"Moda, Tecnología"`)
 - Para actualizar géneros existentes en BQ: `update_generos.py`
 
+## Backend de subida (`backend/`)
+- Cloud Run (FastAPI) en `backend/main.py`
+- Endpoints: `GET /health`, `GET /api/data`, `GET /api/img/{path}`, `POST /api/upload`
+- `POST /api/upload` valida JPG <= 10 MB, sube a GCS (`uploads/<sede>/`), procesa con Gemini, inserta en BigQuery y devuelve el registro
+- La web usa `window.POST_CRONOS_API` para apuntar al backend; si no está definido, usa `data.js`
+- Deploy: `backend/deploy.ps1 -ProjectId <id>` (requiere gcloud)
+- Variables: `GOOGLE_CLOUD_PROJECT`, `BUCKET`, `DATASET`, `TABLE`, `LOCATION`, `MODEL`, `MAX_UPLOAD_MB`, `ALLOWED_ORIGINS`
+- Límites: rate limit por IP (5 cada 10 min), 2 procesamientos concurrentes, solo JPG
+
 ## Scripts útiles
 - `process_with_gemini.py` — procesar nueva tanda de encuestas desde GCS
 - `update_generos.py` — corregir géneros en BigQuery

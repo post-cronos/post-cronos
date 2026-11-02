@@ -71,6 +71,26 @@ footer{text-align:center;padding:30px;color:var(--dim);font-size:.85rem}
 .ai-reco{list-style:none;display:flex;flex-direction:column;gap:8px}
 .ai-reco li{font-size:.85rem;line-height:1.5;background:var(--bg2);border-radius:10px;padding:10px 14px;display:flex;gap:10px;color:#c5c8cc}
 .ai-reco li::before{content:'•';color:var(--accent);font-weight:800}
+.upload-wrap{max-width:680px;margin:20px auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px}
+.upload-wrap h2{font-size:1.2rem;font-weight:800;margin-bottom:6px}
+.upload-wrap>p{font-size:.9rem;color:var(--dim);line-height:1.5;margin-bottom:18px}
+.drop-zone{border:2px dashed var(--border);border-radius:14px;padding:40px 20px;text-align:center;background:var(--bg2);cursor:pointer;transition:border-color .2s,background .2s}
+.drop-zone.drag{border-color:var(--accent);background:#0f1a20}
+.drop-zone p{font-size:.9rem;color:var(--dim);line-height:1.6}
+.link-btn{background:none;border:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline}
+.upload-preview{display:flex;justify-content:center;margin:16px 0}
+.upload-preview img{max-height:280px;max-width:100%;border-radius:12px;border:1px solid var(--border)}
+.upload-field{display:flex;flex-direction:column;gap:6px;margin:14px 0;font-size:.8rem;color:var(--dim);text-transform:uppercase;letter-spacing:.4px}
+.upload-field input{padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font-family:inherit;font-size:.9rem}
+.upload-field input:focus{outline:none;border-color:var(--accent)}
+.upload-btn{width:100%;padding:14px;border:none;border-radius:12px;background:var(--accent);color:#000;font-family:inherit;font-weight:700;font-size:1rem;cursor:pointer;transition:opacity .2s}
+.upload-btn:disabled{opacity:.45;cursor:not-allowed}
+.upload-status{margin-top:14px;font-size:.85rem;line-height:1.5;color:var(--dim);min-height:20px}
+.upload-status.ok{color:#7ee2a8}
+.upload-status.err{color:#ff8a8a}
+.upload-progress{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-top:12px;display:none}
+.upload-progress.show{display:block}
+.upload-progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 @media(max-width:600px){.charts{grid-template-columns:1fr}.gallery{grid-template-columns:1fr}.ai-trends{grid-template-columns:1fr}.ai-insights{grid-template-columns:1fr}}
 </style>
 </head>
@@ -87,6 +107,7 @@ footer{text-align:center;padding:30px;color:var(--dim);font-size:.85rem}
 <nav>
   <button class="active" data-view="dashboard" onclick="switchView('dashboard')">Dashboard</button>
   <button data-view="galeria" onclick="switchView('galeria')">Galería de dibujos</button>
+  <button data-view="subir" onclick="switchView('subir')">Subir dibujo</button>
 </nav>
 
 <section id="view-dashboard" class="active">
@@ -125,14 +146,36 @@ footer{text-align:center;padding:30px;color:var(--dim);font-size:.85rem}
   <div class="gallery" id="gallery"></div>
 </section>
 
+<section id="view-subir">
+  <div class="upload-wrap">
+    <h2>Subí tu dibujo</h2>
+    <p>Foto o escaneo del formulario + dibujo en JPG (máx. 10 MB). La IA extrae los datos y lo agrega a la galería automáticamente.</p>
+    <form id="uploadForm">
+      <div class="drop-zone" id="dropZone">
+        <p>Arrastrá el JPG acá o <button type="button" class="link-btn" id="chooseBtn">elegí un archivo</button></p>
+        <input type="file" id="fileInput" accept="image/jpeg,.jpg,.jpeg" hidden>
+      </div>
+      <div class="upload-preview" id="uploadPreview"></div>
+      <label class="upload-field">Colegio / sede (opcional)
+        <input type="text" id="schoolInput" placeholder="ej: santa_ana" maxlength="40">
+      </label>
+      <div class="upload-progress" id="uploadProgress"><span></span></div>
+      <button type="submit" class="upload-btn" id="submitBtn" disabled>Subir y procesar</button>
+      <div class="upload-status" id="uploadStatus"></div>
+    </form>
+  </div>
+</section>
+
 <footer>Proyecto Post-Cronos · Córdoba, Argentina · 2026 · Datos generados desde BigQuery</footer>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="data.js"></script>
 <script src="resumen_ia.js"></script>
 <script>
-const DATA = window.DATA || [];
+let DATA = window.DATA || [];
 const RESUMEN = window.RESUMEN || null;
+const API_PARAM = new URLSearchParams(location.search).get('api');
+const API_BASE = (API_PARAM || window.POST_CRONOS_API || '').replace(/\/$/, '');
 
 function esc(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
@@ -261,9 +304,12 @@ function renderDashboard(){
 }
 
 // ---- Galería ----
-const ejes = [...new Set(DATA.flatMap(d=>d.eje?d.eje.split(',').map(s=>s.trim()):[]))];
-const filterEje = document.getElementById('filterEje');
-ejes.forEach(e=>{const o=document.createElement('option');o.value=e;o.textContent=e;filterEje.appendChild(o)});
+function populateFilters(){
+  const filterEje=document.getElementById('filterEje');
+  filterEje.querySelectorAll('option:not([value="all"])').forEach(o=>o.remove());
+  const ejes=[...new Set(DATA.flatMap(d=>d.eje?d.eje.split(',').map(s=>s.trim()).filter(Boolean):[]))].sort();
+  ejes.forEach(e=>{const o=document.createElement('option');o.value=e;o.textContent=e;filterEje.appendChild(o)});
+}
 
 function renderGallery(){
   const eje=document.getElementById('filterEje').value;
@@ -297,9 +343,125 @@ document.getElementById('filterEje').addEventListener('change',renderGallery);
 document.getElementById('filterGenero').addEventListener('change',renderGallery);
 document.getElementById('filterSearch').addEventListener('input',renderGallery);
 
-renderDashboard();
-renderResumen();
-renderGallery();
+function setUploadStatus(msg,cls){
+  const el=document.getElementById('uploadStatus');
+  el.className='upload-status'+(cls?' '+cls:'');
+  el.innerHTML=msg;
+}
+
+function setupUpload(){
+  const dropZone=document.getElementById('dropZone');
+  const fileInput=document.getElementById('fileInput');
+  const chooseBtn=document.getElementById('chooseBtn');
+  const preview=document.getElementById('uploadPreview');
+  const form=document.getElementById('uploadForm');
+  const schoolInput=document.getElementById('schoolInput');
+  const submitBtn=document.getElementById('submitBtn');
+  const progress=document.getElementById('uploadProgress');
+  const bar=progress.querySelector('span');
+  let selectedFile=null;
+
+  if(!API_BASE){
+    setUploadStatus('Subida no configurada todavía: falta la URL del backend (window.POST_CRONOS_API).','err');
+    submitBtn.disabled=true;
+  }
+
+  function pick(file){
+    if(!file) return;
+    const okType=/^image\/jpe?g$/i.test(file.type)||/\.jpe?g$/i.test(file.name);
+    if(!okType){ setUploadStatus('Solo se aceptan archivos JPG/JPEG.','err'); return; }
+    if(file.size>10*1024*1024){ setUploadStatus('El archivo supera el máximo de 10 MB.','err'); return; }
+    selectedFile=file;
+    preview.innerHTML='';
+    const img=document.createElement('img');
+    img.alt='Vista previa';
+    img.src=URL.createObjectURL(file);
+    img.onload=()=>URL.revokeObjectURL(img.src);
+    preview.appendChild(img);
+    setUploadStatus('');
+    submitBtn.disabled=!API_BASE;
+  }
+
+  chooseBtn.addEventListener('click',()=>fileInput.click());
+  dropZone.addEventListener('click',(e)=>{ if(e.target!==chooseBtn) fileInput.click(); });
+  fileInput.addEventListener('change',()=>pick(fileInput.files[0]));
+  ['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev,(e)=>{e.preventDefault();dropZone.classList.add('drag')}));
+  ['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev,(e)=>{e.preventDefault();dropZone.classList.remove('drag')}));
+  dropZone.addEventListener('drop',(e)=>pick(e.dataTransfer.files[0]));
+
+  function post(file,school,onProgress){
+    return new Promise((resolve,reject)=>{
+      const fd=new FormData();
+      fd.append('file',file);
+      fd.append('school',school||'');
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST',API_BASE+'/api/upload');
+      xhr.upload.onprogress=(e)=>{ if(e.lengthComputable) onProgress(Math.round(e.loaded/e.total*100)); };
+      xhr.onload=()=>{
+        let body={};
+        try{ body=JSON.parse(xhr.responseText||'{}'); }catch{}
+        if(xhr.status>=200&&xhr.status<300) resolve(body);
+        else reject(new Error(body.detail||('Error HTTP '+xhr.status)));
+      };
+      xhr.onerror=()=>reject(new Error('No se pudo conectar con el servidor.'));
+      xhr.send(fd);
+    });
+  }
+
+  form.addEventListener('submit',async(e)=>{
+    e.preventDefault();
+    if(!selectedFile){ setUploadStatus('Elegí un archivo JPG primero.','err'); return; }
+    if(!API_BASE){ setUploadStatus('Falta configurar la URL del backend.','err'); return; }
+    submitBtn.disabled=true;
+    progress.classList.add('show');
+    bar.style.width='0%';
+    setUploadStatus('Subiendo imagen...');
+    try{
+      const result=await post(selectedFile,schoolInput.value.trim(),(pct)=>{
+        bar.style.width=pct+'%';
+        if(pct>=100) setUploadStatus('Procesando con IA... puede tardar unos segundos.');
+      });
+      if(result.record){
+        DATA.push(result.record);
+        populateFilters();
+        renderDashboard();
+        renderGallery();
+      }
+      setUploadStatus('¡Listo! El dibujo se agregó a la <a href="#" onclick="switchView(\'galeria\');return false;">galería</a>.','ok');
+      selectedFile=null;
+      fileInput.value='';
+      preview.innerHTML='';
+      schoolInput.value='';
+    }catch(err){
+      setUploadStatus(esc(err.message||'Error al subir el archivo.'),'err');
+    }finally{
+      submitBtn.disabled=!selectedFile||!API_BASE;
+      bar.style.width='0%';
+      setTimeout(()=>progress.classList.remove('show'),600);
+    }
+  });
+}
+
+async function loadLiveData(){
+  if(!API_BASE) return;
+  try{
+    const res=await fetch(API_BASE+'/api/data',{cache:'no-store'});
+    if(!res.ok) return;
+    const live=await res.json();
+    if(Array.isArray(live)&&live.length) DATA=live;
+  }catch(e){}
+}
+
+async function init(){
+  await loadLiveData();
+  populateFilters();
+  renderDashboard();
+  renderResumen();
+  renderGallery();
+  setupUpload();
+}
+
+init();
 </script>
 </body>
 </html>
