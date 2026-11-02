@@ -18,6 +18,11 @@ data = [
     ('enc_005', 'Masculino'),
     ('enc_006', 'Femenino'),
     ('enc_test_001', 'Masculino'),
+    # Corrección Santa Ana: las 7 son Femenino
+    ('santa_ana_5336', 'Femenino'),
+    ('santa_ana_5337', 'Femenino'),
+    ('santa_ana_5338', 'Femenino'),
+    ('santa_ana_5340', 'Femenino'),
 ]
 
 for id_encuesta, genero in data:
